@@ -3,11 +3,10 @@ import os
 import subprocess
 import json
 import time
-import re
-import requests
 import streamlit as st
 import pandas as pd
 import sqlite3
+import gdown
 
 # ==========================================
 # 🚀 GÜVENLİ ÇİFT TIKLAMA BAŞLATICISI (LOKAL İÇİN)
@@ -35,56 +34,30 @@ METIN_SUTUNLARI = ["Match ID", "Bülten Kodu", "Tarih", "Saat", "Ülke", "Lig", 
 GDRIVE_LINK = "https://drive.google.com/file/d/194nWTMhPfEZfTACBUOc6iB2CSk0M6MTT/view?usp=drivesdk"
 
 # ==========================================
-# ☁️ BULUT İÇİN CANLI İNDİRME MOTORU (ÇÖKME ÖNLEYİCİ)
+# ☁️ BULUT İÇİN CANLI İNDİRME MOTORU (GDOWN İLE GÜÇLENDİRİLDİ)
 # ==========================================
 def drive_id_bul(url):
+    import re
     match = re.search(r"/d/([a-zA-Z0-9_-]+)", url)
     return match.group(1) if match else url
 
-def veritabani_indir(file_id, destination):
-    URL = "https://docs.google.com/uc?export=download&confirm=t"
-    session = requests.Session()
-    
-    st.warning("☁️ Veritabanı Google Drive'dan çekiliyor... Lütfen sayfayı kapatmayın.")
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    response = session.get(URL, params={'id': file_id}, stream=True)
-    
-    # Drive virüs taraması uyarısını (Büyük dosya engeli) aşmak için
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            response = session.get(URL, params={'id': file_id, 'confirm': value}, stream=True)
-            break
-
-    CHUNK_SIZE = 1024 * 1024 * 2  # 2 MB Parçalar halinde indir (Hızlı ve donmaz)
-    indirilmis = 0
-    tahmini_boyut_mb = 295.0 # Veritabanının yaklaşık boyutu
-    
-    with open(destination, "wb") as f:
-        for chunk in response.iter_content(CHUNK_SIZE):
-            if chunk:
-                f.write(chunk)
-                indirilmis += len(chunk)
-                mb = indirilmis / (1024 * 1024)
-                status_text.text(f"İndiriliyor: {mb:.1f} MB / {tahmini_boyut_mb} MB")
-                
-                # İlerleme çubuğunu doldur (Canlı tutucu)
-                ilerleme = min(mb / tahmini_boyut_mb, 1.0)
-                progress_bar.progress(ilerleme)
-                
-    status_text.success("✅ Veritabanı kusursuz bir şekilde indirildi!")
-    time.sleep(1)
-    st.rerun()
+# KORUMA KALKANI: Eğer dosya var ama boyutu 10 MB'tan küçükse (bozuk HTML inmişse) hemen sil!
+if os.path.exists(db_yolu):
+    if os.path.getsize(db_yolu) < 10 * 1024 * 1024:
+        os.remove(db_yolu)
 
 if not os.path.exists(db_yolu):
     if GDRIVE_LINK != "BURAYA_LINK_GELECEK" and "drive.google.com" in GDRIVE_LINK:
         drive_id = drive_id_bul(GDRIVE_LINK)
-        veritabani_indir(drive_id, db_yolu)
+        with st.spinner("☁️ Veritabanı Google Drive'dan güvenle çekiliyor... (Bu işlem 1-2 dakika sürebilir, sayfayı kapatmayın)"):
+            url = f'https://drive.google.com/uc?id={drive_id}'
+            gdown.download(url, db_yolu, quiet=False)
+        st.success("✅ Veritabanı kusursuz bir şekilde indirildi!")
+        time.sleep(2)
+        st.rerun()
     else:
         st.error("⚠️ Google Drive linki hatalı veya girilmemiş! Lütfen kodun içindeki GDRIVE_LINK kısmını doldurun.")
         st.stop()
-
 
 # ==========================================
 # 🧠 KARDEŞ LİG YAPAY ZEKA ALGORİTMASI
@@ -451,159 +424,4 @@ if len(aktif_filtreler) == 0:
     st.markdown("##### 🔍 Tüm Zamanlar Arşivi (Son 1000 Maç)")
     secim_olayi = st.dataframe(
         gosterilecek_df, 
-        column_config={"Maça Git": st.column_config.LinkColumn("🔗 Link", display_text="Detay")}, 
-        use_container_width=True, 
-        hide_index=True,
-        on_select="rerun",
-        selection_mode="single-row"
-    )
-    
-    secili_satirlar = secim_olayi.selection.rows
-    if secili_satirlar:
-        secili_index = secili_satirlar[0]
-        secili_mac = gosterilecek_df.iloc[secili_index]
-        
-        st.success(f"📌 Seçilen Maç: **{secili_mac.get('Ev Sahibi', '')} vs {secili_mac.get('Deplasman', '')}**")
-        st.markdown("Aşağıdaki butonlara tıklayarak o oranı **doğrudan filtrelere** aktarabilirsiniz:")
-        
-        btn_cols = st.columns(6)
-        col_idx = 0
-        for c_name, c_val in secili_mac.items():
-            if c_name not in METIN_SUTUNLARI and c_name != "Maça Git":
-                try:
-                    num_val = float(str(c_val).replace(',', '.'))
-                    if pd.notna(num_val):
-                        with btn_cols[col_idx % 6]:
-                            if st.button(f"➕ {c_name}\n{num_val:.2f}", key=f"add_{c_name}_{num_val}"):
-                                mevcut_secilenler = st.session_state.get('secilen_sutunlar_widget', [])
-                                if c_name not in mevcut_secilenler:
-                                    st.session_state['update_sutunlar'] = mevcut_secilenler + [c_name]
-                                
-                                st.session_state[f"update_filter_{c_name}"] = num_val
-                                st.rerun()
-                        col_idx += 1
-                except:
-                    pass
-
-else:
-    sonuc_df = dinamik_analiz_yap(aktif_filtreler, bant_yuzdesi)
-    sonuc_df = tarihi_yil_ay_gun_yap(sonuc_df)
-
-    if not sonuc_df.empty:
-        st.markdown("### 🚀 Analiz Sonuçları")
-        m_col1, m_col2, m_col3 = st.columns(3)
-        m_col1.metric("⚡ Bulunan Toplam Maç", len(sonuc_df))
-        if "MS Toplam" in sonuc_df.columns:
-            ort_gol = pd.to_numeric(sonuc_df["MS Toplam"], errors='coerce').mean()
-            m_col2.metric("⚽ Ort. Gol", f"{ort_gol:.2f}")
-        
-        csv_data = csv_hazirla(sonuc_df)
-        m_col3.download_button("📥 Tabloyu İndir (CSV)", data=csv_data, file_name="Analiz.csv", mime="text/csv", use_container_width=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        tab_iy, tab_iy_ev, tab_iy_dep, tab_ms, tab_ms_ev, tab_ms_dep, tab_diger = st.tabs([
-            "⏱️ İY", "🏠 İY EV", "✈️ İY DEP", "🔥 MS", "🏠 MS EV", "✈️ MS DEP", "📌 DİĞER"
-        ])
-
-        gerekli_sutunlar = ["MS 1", "MS 2", "İY 1", "İY 2", "MS Toplam", "İY Toplam"]
-        if all(col in sonuc_df.columns for col in gerekli_sutunlar):
-            df_stat = sonuc_df.copy()
-            for col in gerekli_sutunlar:
-                df_stat[col] = pd.to_numeric(df_stat[col], errors='coerce')
-            df_stat = df_stat.dropna(subset=gerekli_sutunlar)
-            t = len(df_stat)
-
-            if t > 0:
-                with tab_ms:
-                    cols_ms = pd.MultiIndex.from_tuples([("SONUÇ", "1"), ("SONUÇ", "0"), ("SONUÇ", "2"), ("0.5", "ALT"), ("0.5", "ÜST"), ("1.5", "ALT"), ("1.5", "ÜST"), ("2.5", "ALT"), ("2.5", "ÜST"), ("3.5", "ALT"), ("3.5", "ÜST"), ("4.5", "ALT"), ("4.5", "ÜST"), ("KG", "VAR"), ("KG", "YOK")])
-                    row_ms = [yuzde_hesapla(df_stat["MS 1"] > df_stat["MS 2"], t), yuzde_hesapla(df_stat["MS 1"] == df_stat["MS 2"], t), yuzde_hesapla(df_stat["MS 1"] < df_stat["MS 2"], t), yuzde_hesapla(df_stat["MS Toplam"] < 0.5, t), yuzde_hesapla(df_stat["MS Toplam"] > 0.5, t), yuzde_hesapla(df_stat["MS Toplam"] < 1.5, t), yuzde_hesapla(df_stat["MS Toplam"] > 1.5, t), yuzde_hesapla(df_stat["MS Toplam"] < 2.5, t), yuzde_hesapla(df_stat["MS Toplam"] > 2.5, t), yuzde_hesapla(df_stat["MS Toplam"] < 3.5, t), yuzde_hesapla(df_stat["MS Toplam"] > 3.5, t), yuzde_hesapla(df_stat["MS Toplam"] < 4.5, t), yuzde_hesapla(df_stat["MS Toplam"] > 4.5, t), yuzde_hesapla((df_stat["MS 1"] > 0) & (df_stat["MS 2"] > 0), t), yuzde_hesapla((df_stat["MS 1"] == 0) | (df_stat["MS 2"] == 0), t)]
-                    st.dataframe(pd.DataFrame([row_ms], columns=cols_ms, index=["Yüzde"]), use_container_width=True)
-
-                with tab_iy:
-                    cols_iy = pd.MultiIndex.from_tuples([("SONUÇ", "1"), ("SONUÇ", "0"), ("SONUÇ", "2"), ("0.5", "ALT"), ("0.5", "ÜST"), ("1.5", "ALT"), ("1.5", "ÜST"), ("2.5", "ALT"), ("2.5", "ÜST"), ("KG", "VAR"), ("KG", "YOK")])
-                    row_iy = [yuzde_hesapla(df_stat["İY 1"] > df_stat["İY 2"], t), yuzde_hesapla(df_stat["İY 1"] == df_stat["İY 2"], t), yuzde_hesapla(df_stat["İY 1"] < df_stat["İY 2"], t), yuzde_hesapla(df_stat["İY Toplam"] < 0.5, t), yuzde_hesapla(df_stat["İY Toplam"] > 0.5, t), yuzde_hesapla(df_stat["İY Toplam"] < 1.5, t), yuzde_hesapla(df_stat["İY Toplam"] > 1.5, t), yuzde_hesapla(df_stat["İY Toplam"] < 2.5, t), yuzde_hesapla(df_stat["İY Toplam"] > 2.5, t), yuzde_hesapla((df_stat["İY 1"] > 0) & (df_stat["İY 2"] > 0), t), yuzde_hesapla((df_stat["İY 1"] == 0) | (df_stat["İY 2"] == 0), t)]
-                    st.dataframe(pd.DataFrame([row_iy], columns=cols_iy, index=["Yüzde"]), use_container_width=True)
-
-                cols_team = pd.MultiIndex.from_tuples([("0.5", "ALT"), ("0.5", "ÜST"), ("1.5", "ALT"), ("1.5", "ÜST"), ("2.5", "ALT"), ("2.5", "ÜST"), ("3.5", "ALT"), ("3.5", "ÜST")])
-                with tab_ms_ev:
-                    row_ms_ev = [yuzde_hesapla(df_stat["MS 1"] < 0.5, t), yuzde_hesapla(df_stat["MS 1"] > 0.5, t), yuzde_hesapla(df_stat["MS 1"] < 1.5, t), yuzde_hesapla(df_stat["MS 1"] > 1.5, t), yuzde_hesapla(df_stat["MS 1"] < 2.5, t), yuzde_hesapla(df_stat["MS 1"] > 2.5, t), yuzde_hesapla(df_stat["MS 1"] < 3.5, t), yuzde_hesapla(df_stat["MS 1"] > 3.5, t)]
-                    st.dataframe(pd.DataFrame([row_ms_ev], columns=cols_team, index=["Yüzde"]), use_container_width=True)
-                with tab_ms_dep:
-                    row_ms_dep = [yuzde_hesapla(df_stat["MS 2"] < 0.5, t), yuzde_hesapla(df_stat["MS 2"] > 0.5, t), yuzde_hesapla(df_stat["MS 2"] < 1.5, t), yuzde_hesapla(df_stat["MS 2"] > 1.5, t), yuzde_hesapla(df_stat["MS 2"] < 2.5, t), yuzde_hesapla(df_stat["MS 2"] > 2.5, t), yuzde_hesapla(df_stat["MS 2"] < 3.5, t), yuzde_hesapla(df_stat["MS 2"] > 3.5, t)]
-                    st.dataframe(pd.DataFrame([row_ms_dep], columns=cols_team, index=["Yüzde"]), use_container_width=True)
-                
-                with tab_iy_ev:
-                    row_iy_ev = [yuzde_hesapla(df_stat["İY 1"] < 0.5, t), yuzde_hesapla(df_stat["İY 1"] > 0.5, t), yuzde_hesapla(df_stat["İY 1"] < 1.5, t), yuzde_hesapla(df_stat["İY 1"] > 1.5, t), yuzde_hesapla(df_stat["İY 1"] < 2.5, t), yuzde_hesapla(df_stat["İY 1"] > 2.5, t), "-", "-"]
-                    st.dataframe(pd.DataFrame([row_iy_ev], columns=cols_team, index=["Yüzde"]), use_container_width=True)
-                with tab_iy_dep:
-                    row_iy_dep = [yuzde_hesapla(df_stat["İY 2"] < 0.5, t), yuzde_hesapla(df_stat["İY 2"] > 0.5, t), yuzde_hesapla(df_stat["İY 2"] < 1.5, t), yuzde_hesapla(df_stat["İY 2"] > 1.5, t), yuzde_hesapla(df_stat["İY 2"] < 2.5, t), yuzde_hesapla(df_stat["İY 2"] > 2.5, t), "-", "-"]
-                    st.dataframe(pd.DataFrame([row_iy_dep], columns=cols_team, index=["Yüzde"]), use_container_width=True)
-
-                with tab_diger:
-                    d_col1, d_col2 = st.columns(2)
-                    with d_col1:
-                        st.markdown("##### ⚽ Toplam Gol Dağılımı")
-                        df_toplam_gol = pd.DataFrame({
-                            "Gol Sayısı": ["0-1 Gol", "2-3 Gol", "4-5 Gol", "6+ Gol"],
-                            "Yüzde": [yuzde_hesapla(df_stat["MS Toplam"] <= 1, t), yuzde_hesapla((df_stat["MS Toplam"] >= 2) & (df_stat["MS Toplam"] <= 3), t), yuzde_hesapla((df_stat["MS Toplam"] >= 4) & (df_stat["MS Toplam"] <= 5), t), yuzde_hesapla(df_stat["MS Toplam"] >= 6, t)]
-                        })
-                        st.dataframe(df_toplam_gol, use_container_width=True, hide_index=True)
-                    with d_col2:
-                        st.markdown("##### 🔄 İY/MS Dağılımı")
-                        if "İY/MS" in sonuc_df.columns:
-                            iyms_dagilim = sonuc_df["İY/MS"].value_counts(normalize=True).head(9) * 100
-                            df_iyms = pd.DataFrame({"İhtimal": iyms_dagilim.index, "Yüzde": [f"%{val:.1f}" for val in iyms_dagilim.values]})
-                            st.dataframe(df_iyms, use_container_width=True, hide_index=True)
-            else:
-                st.warning("Eksik veri.")
-        else:
-            st.warning("Veritabanında eksik sütunlar var.")
-
-        st.markdown("---")
-        
-        if "Match ID" in sonuc_df.columns:
-            sonuc_df["Maça Git"] = "https://arsiv.mackolik.com/Mac/" + sonuc_df["Match ID"].astype(str) + "/"
-            sutun_sirasi = ["Maça Git"] + [col for col in sonuc_df.columns if col not in ["Maça Git", "Match ID"]]
-            sonuc_df = sonuc_df[sutun_sirasi]
-        
-        gosterilecek_df = sonuc_df.head(1000)
-        
-        st.markdown("##### 🔍 Filtrelenmiş Tablo (Satıra Tıklayarak Maç Oranlarını İnceleyebilirsiniz)")
-        secim_olayi = st.dataframe(
-            gosterilecek_df, 
-            column_config={"Maça Git": st.column_config.LinkColumn("🔗 Link", display_text="Detay")}, 
-            use_container_width=True, 
-            hide_index=True,
-            on_select="rerun",
-            selection_mode="single-row"
-        )
-        
-        secili_satirlar = secim_olayi.selection.rows
-        if secili_satirlar:
-            secili_index = secili_satirlar[0]
-            secili_mac = gosterilecek_df.iloc[secili_index]
-            
-            st.success(f"📌 Seçilen Maç: **{secili_mac.get('Ev Sahibi', '')} vs {secili_mac.get('Deplasman', '')}**")
-            st.markdown("Aşağıdaki butonlara tıklayarak o oranı **doğrudan filtrelere** aktarabilirsiniz:")
-            
-            btn_cols = st.columns(6)
-            col_idx = 0
-            for c_name, c_val in secili_mac.items():
-                if c_name not in METIN_SUTUNLARI and c_name != "Maça Git":
-                    try:
-                        num_val = float(str(c_val).replace(',', '.'))
-                        if pd.notna(num_val):
-                            with btn_cols[col_idx % 6]:
-                                if st.button(f"➕ {c_name}\n{num_val:.2f}", key=f"add_{c_name}_{num_val}"):
-                                    mevcut_secilenler = st.session_state.get('secilen_sutunlar_widget', [])
-                                    if c_name not in mevcut_secilenler:
-                                        st.session_state['update_sutunlar'] = mevcut_secilenler + [c_name]
-                                    
-                                    st.session_state[f"update_filter_{c_name}"] = num_val
-                                    st.rerun()
-                            col_idx += 1
-                    except:
-                        pass
-
-    else:
-        st.error("Girdiğiniz filtrelere uygun geçmiş maç bulunamadı.")
+        co
