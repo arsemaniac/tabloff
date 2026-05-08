@@ -1,0 +1,135 @@
+{
+    "Radiohead": {
+        "Ülke": {
+            "tip": "kategori"
+        },
+        "Lig": {
+            "tip": "kategori"
+        },
+        "Maç Sonucu_1": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "Maç Sonucu_2": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "1,5 Alt/Üst_Üst": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "2,5 Alt/Üst_Üst": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "3,5 Alt/Üst_Üst": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "Karşılıklı Gol_Var": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "1. Yarı Sonucu_1": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "1. Yarı Sonucu_2": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "1. Yarı 0,5 Alt/Üst_Üst": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "1. Yarı 1,5 Alt/Üst_Üst": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "Evsahibi 1,5 Alt/Üst_Üst": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        },
+        "Deplasman 1,5 Alt/Üst_Üst": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 2.5
+        }
+    },
+    "kardişlig": {
+        "Lig": {
+            "tip": "kategori"
+        },
+        "Maç Sonucu_1": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 3.0
+        },
+        "Maç Sonucu_2": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 3.0
+        },
+        "Handikaplı Maç Sonucu (0:1)_1": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 3.0
+        },
+        "Handikaplı Maç Sonucu (1:0)_2": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 3.0
+        },
+        "2,5 Alt/Üst_Alt": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 3.0
+        },
+        "2,5 Alt/Üst_Üst": {
+            "tip": "oran",
+            "yontem": "Bant (%)",
+            "bant": 3.0
+        },
+        "İY 1": {
+            "tip": "oran",
+            "yontem": "Eşittir (=)",
+            "bant": 3.0
+        },
+        "İY 2": {
+            "tip": "oran",
+            "yontem": "Eşittir (=)",
+            "bant": 3.0
+        },
+        "Ev Kırmızı": {
+            "tip": "oran",
+            "yontem": "Eşittir (=)",
+            "bant": 3.0
+        },
+        "Dep Kırmızı": {
+            "tip": "oran",
+            "yontem": "Eşittir (=)",
+            "bant": 3.0
+        },
+        "MS 1": {
+            "tip": "oran",
+            "yontem": "Büyüktür (>)",
+            "bant": 3.0
+        },
+        "MS 2": {
+            "tip": "oran",
+            "yontem": "Büyüktür (>)",
+            "bant": 3.0
+        }
+    }
+}
