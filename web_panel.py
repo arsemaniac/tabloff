@@ -31,7 +31,7 @@ sablon_dosyasi = "sablonlar.json"
 METIN_SUTUNLARI = ["Match ID", "Bülten Kodu", "Tarih", "Saat", "Ülke", "Lig", "Ev Sahibi", "Deplasman", "İY/MS"]
 
 # ⚠️ DİKKAT: GOOGLE DRIVE LİNKİNİ AŞAĞIDAKİ TIRNAKLARIN İÇİNE YAPIŞTIR:
-GDRIVE_LINK = "BURAYA_LINK_GELECEK"
+GDRIVE_LINK = "https://drive.google.com/file/d/194nWTMhPfEZfTACBUOc6iB2CSk0M6MTT/view?usp=drivesdk"
 
 # ==========================================
 # ☁️ BULUT İÇİN CANLI İNDİRME MOTORU (GDOWN İLE GÜÇLENDİRİLDİ)
